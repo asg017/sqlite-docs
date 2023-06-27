@@ -1,0 +1,13 @@
+[package]
+name = "sqlite-docs-extension"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+sqlite-loadable = {path="../../sqlite-loadable-rs"}
+sqlite-docs-core = {path="../core"}
+serde_json = "1.0"
+serde = "1.0"
+
+[lib]
+crate-type = ["lib", "cdylib", "staticlib"]

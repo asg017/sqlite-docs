@@ -1,0 +1,7 @@
+/target
+/Cargo.lock
+
+*.db
+dist/
+*.parquet
+examples/**/metadata.json
