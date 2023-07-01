@@ -1,6 +1,8 @@
 mod datasette;
 mod markdown;
 
+use std::io::Write;
+
 use anyhow::{anyhow, Context, Result};
 use clap::{Arg, ArgMatches, Command};
 use rusqlite::{ffi::sqlite3_auto_extension, Connection};
@@ -14,13 +16,15 @@ fn command() -> Command {
         .about("Documentation for SQLite tables, comments, and extensions")
         .subcommand(
             Command::new("generate-datasette")
-                .about("Initialize a spm project")
-                .arg(Arg::new("db").required(true)),
+                .about("Generate a metadata.json for Datasette")
+                .arg(Arg::new("db").required(true))
+                .arg(Arg::new("output").alias("o").required(false)),
         )
         .subcommand(
             Command::new("generate-markdown")
-                .about("Initialize a spm project")
-                .arg(Arg::new("db").required(true)),
+                .about("Generate a markdown-formatted data dictionary")
+                .arg(Arg::new("db").required(true))
+                .arg(Arg::new("output").alias("o").required(false)),
         )
 }
 
@@ -39,7 +43,12 @@ fn execute_matches(matches: &ArgMatches) -> Result<()> {
                     .to_string_lossy(),
                 tables,
             );
-            println!("{}", serde_json::to_string_pretty(&metadata)?);
+            let mut w: Box<dyn Write> = match matches.get_one::<String>("output") {
+                Some(output_path) => Box::new(std::fs::File::open(output_path)?),
+                None => Box::new(std::io::stdout()),
+            };
+
+            writeln!(w, "{}", serde_json::to_string_pretty(&metadata)?)?;
             Ok(())
         }
         Some(("generate-markdown", matches)) => {
@@ -49,7 +58,13 @@ fn execute_matches(matches: &ArgMatches) -> Result<()> {
             let db = Connection::open(db_path)?;
             let tables = table_docs_from(&db)?;
             let markdown = markdown::generate_markdown(tables)?;
-            println!("{}", markdown);
+
+            let mut w: Box<dyn Write> = match matches.get_one::<String>("output") {
+                Some(output_path) => Box::new(std::fs::File::open(output_path)?),
+                None => Box::new(std::io::stdout()),
+            };
+
+            writeln!(w, "{}", markdown)?;
             Ok(())
         }
         Some((cmd, _matches)) => Err(anyhow!("unknown subcommand {cmd}")),
